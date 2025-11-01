@@ -15,8 +15,10 @@ import java.util.stream.StreamSupport;
 
 public class GitHubAnalyzer {
     private static HttpURLConnection conn = null;
+    private static ObjectMapper mapper = new ObjectMapper();
 
     public void analyze(String username) {
+        System.out.printf("=== GitHub Profile: %s ===\n\n", username);
         analyzeProfile(username);
         analyzeRepositories(username);
         analyzeLanguages(username);
@@ -29,6 +31,7 @@ public class GitHubAnalyzer {
 
             conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
+            conn.setRequestProperty("User-Agent", "Java-GitHubAnalyzer");
 
             int responseCode = conn.getResponseCode();
             if (responseCode == 200) {
@@ -45,6 +48,10 @@ public class GitHubAnalyzer {
                 }
             }
         } catch (Exception e) {
+        }finally {
+            if (conn != null) {
+                conn.disconnect();
+            }
         }
         return null;
     }
@@ -53,7 +60,9 @@ public class GitHubAnalyzer {
 
         String urlStr = "https://api.github.com/users/" + username;
         String json = getData(urlStr);
-        ObjectMapper mapper = new ObjectMapper();
+        if(!isValid(json)){
+            return;
+        }
         JsonNode root = null;
         try {
             root = mapper.readTree(json);
@@ -70,7 +79,11 @@ public class GitHubAnalyzer {
     public static void analyzeRepositories(String username) {
         String urlStr = "https://api.github.com/users/" + username + "/repos?per_page=100";
         String json = getData(urlStr);
-        ObjectMapper mapper = new ObjectMapper();
+
+        if(!isValid(json)){
+            return;
+        }
+
         JsonNode root = null;
         try {
             root = mapper.readTree(json);
@@ -91,7 +104,10 @@ public class GitHubAnalyzer {
 
         String urlStr = "https://api.github.com/users/" + username + "/repos";
         String urlJson = getData(urlStr);
-        ObjectMapper mapper = new ObjectMapper();
+        if(!isValid(urlJson)){
+            return;
+        }
+
         JsonNode root = null;
         try {
             root = mapper.readTree(urlJson);
@@ -105,9 +121,12 @@ public class GitHubAnalyzer {
             //System.out.println(str);  // url of repo
 
             String data = getData(str);   // date retrieved from repo languages Link
-            ObjectMapper mapper2 = new ObjectMapper();
+            if(!isValid(data)){
+                return;
+            }
+
             try {
-                JsonNode languagesNode = mapper2.readTree(data);
+                JsonNode languagesNode = mapper.readTree(data);
                 Iterator<String> lang =  languagesNode.fieldNames();
                 String langName;
                 long val;
@@ -127,5 +146,11 @@ public class GitHubAnalyzer {
             System.out.printf("- %s: %.2f%%\n", key, percentage);
         });
         System.out.println();
+    }
+    private static boolean isValid(String json){
+        if(json == null || json.trim().isEmpty() || json.isBlank()){
+            return false;
+        }
+        return true;
     }
 }
