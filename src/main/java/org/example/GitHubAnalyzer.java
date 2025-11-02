@@ -69,11 +69,11 @@ public class GitHubAnalyzer {
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
-        System.out.println("Name : " + root.get("name").asText());
-        System.out.println("Bio : " + root.get("bio").asText());
-        System.out.println("Followers : " + root.get("followers").asText());
-        System.out.println("Following : " + root.get("following").asText());
-        System.out.println("Public Repos: +" + root.get("public_repos").asText());
+        System.out.println("Name : " + root.get("name").asText("No Name"));
+        System.out.println("Bio : " + root.get("bio").asText("No Bio"));
+        System.out.println("Followers : " + root.get("followers").asText("No Followers"));
+        System.out.println("Following : " + root.get("following").asText("No Following"));
+        System.out.println("Public Repos: +" + root.get("public_repos").asText("No Public Repos"));
     }
 
     public static void analyzeRepositories(String username) {
@@ -95,7 +95,7 @@ public class GitHubAnalyzer {
         StreamSupport.stream(root.spliterator(), false).sorted((r1, r2) -> {
             return r2.get("stargazers_count").asInt() - r1.get("stargazers_count").asInt();
         }).limit(3).forEach((repo) -> {
-            System.out.printf("- %s (Stars : %s)\n", repo.get("name").asText(), repo.get("stargazers_count").asInt());
+            System.out.printf("- %s (Stars : %s)\n", repo.get("name").asText("No Name"), repo.get("stargazers_count").asInt(0));
         });
         System.out.println();
     }
@@ -133,7 +133,7 @@ public class GitHubAnalyzer {
                 while (lang.hasNext()) {
                     langName = lang.next();
                     val = map.getOrDefault(langName,0L);
-                    map.put(langName, val + languagesNode.get(langName).asLong());
+                    map.put(langName, val + languagesNode.get(langName).asLong(0L));
                 }
             } catch (JsonProcessingException e) {
                 throw new RuntimeException(e);
