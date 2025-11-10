@@ -5,9 +5,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -16,6 +20,7 @@ import java.util.stream.StreamSupport;
 public class GitHubAnalyzer {
 	private static HttpURLConnection conn = null;
 	private static ObjectMapper mapper = new ObjectMapper();
+	private static final HttpClient client = HttpClient.newHttpClient();
 
 	public void analyze(String username) {
 		System.out.printf("=== GitHub Profile: %s ===\n\n", username);
@@ -24,6 +29,31 @@ public class GitHubAnalyzer {
 		analyzeLanguages(username);
 	}
 
+	private static String getResponse(String urlStr) {
+
+		HttpRequest request = HttpRequest.newBuilder()
+				.header("User-Agent", "Java-GitHubAnalyzer")
+				.GET()
+				.build();
+
+		try {
+			HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+			if (response.statusCode() == 200) {
+				return response.body();
+			} else if (response.statusCode() == 404) {
+				System.out.println("not found");
+				return null;
+			} else if (response.statusCode() >= 500) {
+				System.out.println("server error");
+				return null;
+			}
+		} catch (IOException | InterruptedException e) {
+			throw new RuntimeException(e);
+		}
+		return null;
+	}
+
+	@Deprecated
 	private static String getData(String urlStr) {
 		HttpURLConnection conn = null;
 		try {
@@ -59,7 +89,7 @@ public class GitHubAnalyzer {
 	public static void analyzeProfile(String username) {
 
 		String urlStr = "https://api.github.com/users/" + username;
-		String json = getData(urlStr);
+		String json = getResponse(urlStr);
 		if (!isValid(json)) {
 			return;
 		}
@@ -78,7 +108,7 @@ public class GitHubAnalyzer {
 
 	public static void analyzeRepositories(String username) {
 		String urlStr = "https://api.github.com/users/" + username + "/repos?per_page=100";
-		String json = getData(urlStr);
+		String json = getResponse(urlStr);
 
 		if (!isValid(json)) {
 			return;
@@ -104,7 +134,7 @@ public class GitHubAnalyzer {
 	public static void analyzeLanguages(String username) {
 
 		String urlStr = "https://api.github.com/users/" + username + "/repos";
-		String urlJson = getData(urlStr);
+		String urlJson = getResponse(urlStr);
 		if (!isValid(urlJson)) {
 			return;
 		}
@@ -121,7 +151,7 @@ public class GitHubAnalyzer {
 			String str = url.asText();
 			// System.out.println(str); // url of repo
 
-			String data = getData(str); // date retrieved from repo languages Link
+			String data = getResponse(str); // date retrieved from repo languages Link
 			if (!isValid(data)) {
 				return;
 			}
